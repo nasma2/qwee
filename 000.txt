@@ -1,0 +1,111 @@
+OSPF
+1) configure ip address and hostname
+2) configure loopback interface
+	eg : int l0
+	     ip address 1.1.1.1 255.255.255.255
+	     exit
+	     do sh ip int br
+3) configure ospf and passive interface
+	eg : router ospf 1
+	     net 10.0.12.0 0.0.0.3 area 0
+	     net 10.0.13.0 0.0.0.3 area 0
+	     net 1.1.1.1 0.0.0.0 area 0
+	     passive-interface l0
+	     exit
+	     do sh ip ospf int
+	     do sh run | section ospf
+4)Enable OSPF directly
+	eg : int range g0/0,f0/1,l0
+	     ip ospf 1 area 0
+	     do sh ip ospf int
+	     router ospf 1
+	     passive-interface l0
+	     exit
+5)Configure the reference bandwidth on each router
+	eg : router ospf 1
+	     auto-cost reference-bandwidth 10000
+	     do sh ip ospf int
+	     do sh ip ospf neighbor
+6) configure asbr
+	eg : router ospf 1
+	     default-information originate
+	     exit 
+	     ip route 0.0.0.0 0.0.0.0 203.0.113.2
+7) checking routing table
+	do sh ip ospf neighbor
+	do sh ip route
+
+Standard ACL
+1)configure ip address
+2)configure ospf
+3)do sh ip ospf neighbor and  do sh ip route
+4)configure standard named acl
+	ip access-list standard name
+	permit 172.16.1.0
+	deny any
+	exit
+	int g0/0
+	ip access-group name out
+	exit
+5)configure standard numberd acl
+	access-list 1 deny 172.16.2.0 0.0.0.255
+	access-list 1 permit any
+	access-list 2 deny 172.16.1.0 0.0.0.255
+	access-list 2 permit any
+	do sh access-list
+	int g0/0
+	ip access-group 1 out
+	int g0/1
+	ip access-group 2 out
+6)configure extended acl
+	create dns service 
+	create ospf
+	configure extended acl
+		ip access-list extended 100
+	dns =   deny udp 172.16.1.0 0.0.0.255 host 192.16.1.100 eq 53
+http 80		deny tcp 172.16.1.0 0.0.0.255 host 192.16.1.100 eq 53
+https 443		permit ip any any
+		exit
+		int g0/0
+		ip access-group 100 in
+		do sh access-list
+
+static nat
+1) assign ip address
+2) create loopback
+	do sh ip int br
+3)create ip route
+	ip route 0.0.0.0 0.0.0.0 203.15.113.2
+	do sh ip route
+4)configure static nat
+	int g0/1
+	ip nat inside
+	exit
+	int g0/0
+	ip nat outside
+	exit
+	ip nat inside source static 172.16.15.1 100.0.0.1
+	ip nat inside source static 172.16.15.2 100.0.0.2
+	ip nat inside source static 172.16.15.3 100.0.0.3
+	do sh ip nat translation
+	do clear ip nat translation *
+
+Dynamic nat
+1)configure interface
+	int g0/1
+	ip nat inside
+	exit
+	int g0/0
+	ip nat outside
+	exit
+translate all traffic from 172.16.0.0/24
+	access-list 1 permit 172.16.0.0 0.0.0.255
+create pool
+	ip nat pool POOL1 100.0.0.1 100.0.0.2 netmask 255.255.255.0
+	ip nat inside source list 1 pool POOL1
+switch pat
+	do clear ip nat translation *
+	do sh ip nat translation
+	do sh run | include nat
+	ip nat inside source list 1 interface g0/0 overload
+	do sh run | include nat
